@@ -183,3 +183,45 @@ test("uses equal-width and equal-height view bounds to preserve geometry scale",
   assert.equal(result.ok, true);
   assert.equal(result.bounds.view.width, result.bounds.view.height);
 });
+
+test("treats polygonal object contact with the boundary as fully inside", () => {
+  const result = buildScene({
+    boundary: [
+      [0, 0],
+      [10, 0],
+      [10, 10],
+      [0, 10],
+    ],
+    objects: [
+      {
+        name: "EDGE_SQUARE",
+        center: [1, 5],
+        size: 2,
+        shape: "square",
+      },
+    ],
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.objects[0].fullyInside, true);
+  assert.equal(result.objects[0].boundaryOverlap, false);
+});
+
+test("rejects null coordinates instead of coercing them to zero", () => {
+  const result = buildScene({
+    boundary: [
+      [null, 0],
+      [10, 0],
+      [10, 10],
+      [0, 10],
+    ],
+    objects: [],
+  });
+
+  assert.equal(result.ok, false);
+  assert.ok(
+    result.errors.some(
+      (error) => error.code === "boundary_coordinate_invalid",
+    ),
+  );
+});

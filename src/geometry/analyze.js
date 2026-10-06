@@ -13,7 +13,7 @@
 import {
   minimumDistanceToPolygonBoundary,
   pointInPolygon,
-  polygonEdgesIntersect,
+  polygonEdgesProperlyIntersect,
 } from "./polygon.js";
 import {
   objectRadius,
@@ -27,7 +27,7 @@ function polygonObjectFullyInside(object, boundary) {
     return false;
   }
 
-  return !polygonEdgesIntersect(vertices, boundary);
+  return !polygonEdgesProperlyIntersect(vertices, boundary);
 }
 
 export function analyzeObject(object, boundary) {

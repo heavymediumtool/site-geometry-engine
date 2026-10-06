@@ -44,6 +44,20 @@ export function pointOnSegment(point, a, b) {
   );
 }
 
+export function segmentsProperlyIntersect(a, b, c, d) {
+  const abC = cross(a, b, c);
+  const abD = cross(a, b, d);
+  const cdA = cross(c, d, a);
+  const cdB = cross(c, d, b);
+
+  return (
+    ((abC > EPSILON && abD < -EPSILON) ||
+      (abC < -EPSILON && abD > EPSILON)) &&
+    ((cdA > EPSILON && cdB < -EPSILON) ||
+      (cdA < -EPSILON && cdB > EPSILON))
+  );
+}
+
 export function segmentsIntersect(a, b, c, d) {
   const abC = cross(a, b, c);
   const abD = cross(a, b, d);
@@ -190,6 +204,28 @@ export function polygonEdgesIntersect(first, second) {
       const d = second[(secondIndex + 1) % second.length];
 
       if (segmentsIntersect(a, b, c, d)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+export function polygonEdgesProperlyIntersect(first, second) {
+  for (let firstIndex = 0; firstIndex < first.length; firstIndex += 1) {
+    const a = first[firstIndex];
+    const b = first[(firstIndex + 1) % first.length];
+
+    for (
+      let secondIndex = 0;
+      secondIndex < second.length;
+      secondIndex += 1
+    ) {
+      const c = second[secondIndex];
+      const d = second[(secondIndex + 1) % second.length];
+
+      if (segmentsProperlyIntersect(a, b, c, d)) {
         return true;
       }
     }

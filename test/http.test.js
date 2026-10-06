@@ -27,7 +27,7 @@ test("GET /demo returns the canonical rendered scene", async () => {
 
   const payload = await response.json();
   assert.equal(payload.ok, true);
-  assert.equal(payload.version, "0.1.0");
+  assert.equal(payload.version, "0.1.1");
   assert.equal(payload.objects[0].radius, 1);
 });
 
@@ -92,4 +92,17 @@ test("invalid JSON returns a structured 400 response", async () => {
   const payload = await response.json();
   assert.equal(payload.ok, false);
   assert.equal(payload.errors[0].code, "invalid_json");
+});
+
+test("GET /demo/complex renders all supported demonstration objects", async () => {
+  const response = await worker.fetch(
+    new Request("https://example.test/demo/complex"),
+  );
+
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.ok, true);
+  assert.equal(payload.objects.length, 6);
+  assert.equal(payload.coordinateSystem.positiveY, "up");
+  assert.equal(payload.coordinateSystem.equalAxisScale, true);
 });

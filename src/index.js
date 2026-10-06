@@ -12,6 +12,7 @@
 
 import {
   buildScene,
+  COMPLEX_DEMO_INPUT,
   DEMO_INPUT,
   ENGINE_VERSION,
 } from "./api/render.js";
@@ -115,6 +116,8 @@ export default {
           "POST /geometry/render.svg",
           "GET /demo",
           "GET /demo.svg",
+          "GET /demo/complex",
+          "GET /demo/complex.svg",
         ],
       });
     }
@@ -125,6 +128,14 @@ export default {
 
     if (request.method === "GET" && url.pathname === "/demo.svg") {
       return svgResponse(buildScene(DEMO_INPUT).svg);
+    }
+
+    if (request.method === "GET" && url.pathname === "/demo/complex") {
+      return jsonResponse(buildScene(COMPLEX_DEMO_INPUT));
+    }
+
+    if (request.method === "GET" && url.pathname === "/demo/complex.svg") {
+      return svgResponse(buildScene(COMPLEX_DEMO_INPUT).svg);
     }
 
     if (

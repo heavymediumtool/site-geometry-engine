@@ -38,6 +38,15 @@ const DEFAULT_STYLE = Object.freeze({
 });
 
 function toFiniteNumber(value) {
+  if (
+    value === null ||
+    value === undefined ||
+    typeof value === "boolean" ||
+    (typeof value === "string" && value.trim() === "")
+  ) {
+    return Number.NaN;
+  }
+
   const number = Number(value);
   return Number.isFinite(number) ? number : Number.NaN;
 }

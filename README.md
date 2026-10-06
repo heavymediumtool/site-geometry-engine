@@ -4,7 +4,7 @@ Cloudflare Worker for validating, analyzing, and rendering 2D site geometry from
 
 ## Status
 
-Version: `0.1.0`
+Version: `0.1.1`
 
 Production Worker:
 
@@ -90,6 +90,14 @@ Returns the canonical 10×10 boundary with a diameter-2 circle centered at `(5,5
 ### `GET /demo.svg`
 
 Returns the same demonstration as a 900×900 SVG coordinate graph.
+
+### `GET /demo/complex`
+
+Returns an irregular named boundary plus six styled objects demonstrating circles, square, diamond, triangle, hexagon, transparency, and fill patterns.
+
+### `GET /demo/complex.svg`
+
+Returns the complex demonstration directly as SVG.
 
 ## Geometry rules
 
