@@ -273,7 +273,7 @@ export function renderSvg(scene) {
   ].join(" ");
 
   return [
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${svgViewBox}" role="img" aria-label="Coordinate geometry map">`,
+    `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="900" viewBox="${svgViewBox}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Coordinate geometry map">`,
     `<defs>${patterns}</defs>`,
     `<style>`,
     `.grid line{stroke:#cbd5e1;stroke-width:1;vector-effect:non-scaling-stroke}.grid .axis{stroke:#64748b;stroke-width:1.5}.boundary{fill:none;stroke:#111827;stroke-width:2;vector-effect:non-scaling-stroke}.tick-labels,.object-label,text{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;fill:#111827}.object-label{font-weight:700}.point-marker{fill:#111827}`,

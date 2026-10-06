@@ -42,6 +42,7 @@ test("renders the canonical 10x10 square with a centered diameter-2 circle", () 
   assert.equal(result.objects[0].centerInside, true);
   assert.equal(result.objects[0].fullyInside, true);
   assert.match(result.svg, /<circle cx="5" cy="5" r="1"/);
+  assert.match(result.svg, /width="900" height="900"/);
 });
 
 test("drops an explicitly repeated closing boundary coordinate", () => {
