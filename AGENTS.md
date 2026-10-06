@@ -481,7 +481,7 @@ If all prior chat context is missing:
 
 The engine accepts either explicit `boundary` coordinates or a `traverse`; never both in the same request.
 
-Traverse input represents a closed perimeter as ordered `[length, headingDegrees]` legs or expanded segment objects.
+Traverse input represents ordered `[length, headingDegrees]` legs or expanded segment objects. It supports both true measured closed traverses and open measured traverses that are intentionally closed with a synthetic return segment.
 
 Heading convention is phone-compass style:
 
@@ -500,7 +500,15 @@ dy = L × cos(θ)
 
 Angles are converted to radians internally.
 
-The default correction mode is heading-only least-squares closure:
+Traverse semantics are explicit:
+
+- `closed_adjustable` is the default. All supplied legs are measured perimeter edges, and closure inconsistency may be corrected.
+- `append_closing_segment` preserves every supplied length and heading exactly and appends one synthetic final edge from the measured endpoint back to the start.
+- `closeToStart: true` is an alias for `append_closing_segment`.
+
+Never apply heading correction merely because an open traverse was intentionally instructed to connect back to its origin.
+
+For `closed_adjustable`, the default correction mode is heading-only least-squares closure:
 
 - segment lengths remain fixed;
 - raw observations are always retained in output;
@@ -510,7 +518,7 @@ The default correction mode is heading-only least-squares closure:
 - corrections above the configured maximum are rejected rather than silently accepted;
 - `correction.mode = "none"` disables correction and requires the raw traverse to close.
 
-Do not replace this with a simple forced final edge. That would conceal measurement error and create an unmeasured side.
+Do not append a synthetic closing edge to a `closed_adjustable` traverse, because that would conceal measurement error. Conversely, do not heading-adjust an `append_closing_segment` traverse merely to eliminate the intentionally unmeasured return edge.
 
 Do not claim the solver has identified the uniquely wrong heading. Closed-traverse error supplies only closure constraints, so several heading-adjustment combinations can satisfy closure. The current equal-weight least-squares solution is the minimum-squared-change correction.
 
@@ -519,6 +527,8 @@ A uniform compass bias is fundamentally unobservable from closure alone: adding 
 When changing traverse correction behavior, tests must cover:
 
 - an exactly closed compass traverse;
+- an open measured traverse with an explicit synthetic return-to-start edge;
+- preservation of measured headings in append-closing mode;
 - a small heading inconsistency that is corrected;
 - preservation of all supplied lengths;
 - excessive correction rejection;

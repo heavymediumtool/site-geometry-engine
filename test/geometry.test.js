@@ -354,3 +354,95 @@ test("rejects simultaneous coordinate boundary and traverse inputs", () => {
   assert.equal(result.ok, false);
   assert.equal(result.errors[0].code, "input_geometry_conflict");
 });
+
+
+test("append_closing_segment preserves the user's measured legs and creates one synthetic return edge", () => {
+  const result = buildScene({
+    traverse: {
+      mode: "append_closing_segment",
+      units: "ft",
+      start: [0, 0],
+      segments: [
+        [13, 135],
+        [10, 90],
+        [20, 30],
+        [28, 270],
+      ],
+    },
+    objects: [],
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.traverse.traverseMode, "append_closing_segment");
+  assert.equal(result.traverse.correction.applied, false);
+  assert.equal(result.traverse.measuredLength, 71);
+  assert.equal(result.boundary.length, 5);
+
+  assert.deepEqual(
+    result.traverse.measured.segments.map((segment) => ({
+      length: segment.length,
+      headingDeg: segment.headingDeg,
+      correction: segment.headingCorrectionDeg,
+    })),
+    [
+      { length: 13, headingDeg: 135, correction: 0 },
+      { length: 10, headingDeg: 90, correction: 0 },
+      { length: 20, headingDeg: 30, correction: 0 },
+      { length: 28, headingDeg: 270, correction: 0 },
+    ],
+  );
+
+  const endpoint = result.traverse.measured.end;
+  assert.ok(Math.abs(endpoint.x - 1.192388155425121) < 1e-9);
+  assert.ok(Math.abs(endpoint.y - 8.128119920263652) < 1e-9);
+
+  const closing = result.traverse.appendedClosingSegment;
+  assert.equal(closing.synthetic, true);
+  assert.equal(closing.measured, false);
+  assert.ok(Math.abs(closing.length - 8.21511551661843) < 1e-9);
+  assert.ok(Math.abs(closing.headingDeg - 188.34571265783373) < 1e-9);
+  assert.ok(
+    Math.abs(
+      result.traverse.boundaryPerimeter - 79.21511551661843,
+    ) < 1e-9,
+  );
+  assert.deepEqual(closing.to, { x: 0, y: 0 });
+  assert.equal(result.warnings.length, 0);
+});
+
+test("closeToStart is accepted as an alias for append_closing_segment", () => {
+  const result = buildScene({
+    traverse: {
+      closeToStart: true,
+      segments: [
+        [10, 0],
+        [10, 90],
+      ],
+    },
+    objects: [],
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.traverse.traverseMode, "append_closing_segment");
+  assert.equal(result.boundary.length, 3);
+  assert.ok(result.traverse.appendedClosingSegment);
+});
+
+test("closed_adjustable remains the default for measured closed traverses", () => {
+  const result = buildScene({
+    traverse: {
+      segments: [
+        [10, 90],
+        [10, 182],
+        [10, 270],
+        [10, 0],
+      ],
+    },
+    objects: [],
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.traverse.traverseMode, "closed_adjustable");
+  assert.equal(result.traverse.correction.applied, true);
+  assert.ok(result.traverse.corrected.closure.distance < 1e-7);
+});

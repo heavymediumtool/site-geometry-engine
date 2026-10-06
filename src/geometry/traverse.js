@@ -1,12 +1,12 @@
 /**
  * PATH: src/geometry/traverse.js
- * PURPOSE: Convert closed-traverse length/compass-heading observations into a corrected boundary.
+ * PURPOSE: Convert length/compass-heading observations into closed site boundaries.
  * TAGS: geometry, traverse, compass, survey, closure-adjustment
  * ATTACHED: src/api/render.js, test/geometry.test.js
  * CALLED_BY: src/api/render.js
  * CALLS/DEPENDS_ON: none
- * RUNTIME_ROLE: Traverse normalization and heading-only closure adjustment
- * STATE_OWNERSHIP: Produces raw/corrected traverse diagnostics and boundary coordinates
+ * RUNTIME_ROLE: Traverse normalization, optional heading correction, and synthetic closure
+ * STATE_OWNERSHIP: Produces measured/corrected traverse diagnostics and boundary coordinates
  * SIGNALS/EVENTS: none
  */
 
@@ -52,6 +52,10 @@ function shortestAngleDifferenceDeg(to, from) {
   }
 
   return difference;
+}
+
+function headingFromDelta(dx, dy) {
+  return normalizeHeadingDeg(Math.atan2(dx, dy) * RAD_TO_DEG);
 }
 
 function normalizeStart(rawStart) {
@@ -102,6 +106,32 @@ function normalizeSegments(rawSegments) {
       ),
     };
   });
+}
+
+function normalizeTraverseMode(rawTraverse) {
+  const traverse =
+    rawTraverse && typeof rawTraverse === "object"
+      ? rawTraverse
+      : {};
+
+  if (traverse.closeToStart === true) {
+    return "append_closing_segment";
+  }
+
+  const rawMode = String(
+    traverse.mode ?? "closed_adjustable",
+  ).toLowerCase();
+
+  if (
+    rawMode === "append_closing_segment" ||
+    rawMode === "append-closing-segment" ||
+    rawMode === "connect_back_to_start" ||
+    rawMode === "open_append_close"
+  ) {
+    return "append_closing_segment";
+  }
+
+  return "closed_adjustable";
 }
 
 function displacement(length, headingRad) {
@@ -294,7 +324,7 @@ function solveHeadingClosure(
   };
 }
 
-function validateTraverse(start, segments) {
+function validateTraverse(start, segments, mode) {
   const errors = [];
 
   if (!Number.isFinite(start.x) || !Number.isFinite(start.y)) {
@@ -305,11 +335,16 @@ function validateTraverse(start, segments) {
     });
   }
 
-  if (segments.length < 3) {
+  const minimumSegments =
+    mode === "append_closing_segment" ? 2 : 3;
+
+  if (segments.length < minimumSegments) {
     errors.push({
       code: "traverse_too_small",
       message:
-        "Traverse must contain at least three boundary segments.",
+        mode === "append_closing_segment"
+          ? "Traverse must contain at least two measured segments when appending a closing segment."
+          : "Traverse must contain at least three measured boundary segments.",
     });
   }
 
@@ -331,7 +366,7 @@ function validateTraverse(start, segments) {
     }
   }
 
-  if (errors.length === 0) {
+  if (errors.length === 0 && mode === "closed_adjustable") {
     const perimeter = segments.reduce(
       (sum, segment) => sum + segment.length,
       0,
@@ -352,7 +387,7 @@ function validateTraverse(start, segments) {
   return errors;
 }
 
-function correctionSettings(rawCorrection, perimeter) {
+function correctionSettings(rawCorrection, measuredLength) {
   const correction =
     rawCorrection && typeof rawCorrection === "object"
       ? rawCorrection
@@ -377,7 +412,7 @@ function correctionSettings(rawCorrection, perimeter) {
       Number.isFinite(toleranceCandidate) &&
       toleranceCandidate > 0
         ? toleranceCandidate
-        : Math.max(perimeter * 1e-9, 1e-8),
+        : Math.max(measuredLength * 1e-9, 1e-8),
     maxHeadingCorrectionDeg:
       Number.isFinite(maxCandidate) && maxCandidate > 0
         ? maxCandidate
@@ -397,31 +432,127 @@ function closurePrecision(perimeter, closureDistance) {
   return perimeter / closureDistance;
 }
 
+function boundaryFromOpenTraverse(rawGeometry, toleranceDistance) {
+  const boundary = [...rawGeometry.points];
+  const first = rawGeometry.points[0];
+
+  const endToStartDistance = Math.hypot(
+    rawGeometry.end.x - first.x,
+    rawGeometry.end.y - first.y,
+  );
+
+  if (endToStartDistance > toleranceDistance) {
+    boundary.push({
+      name: `P${rawGeometry.points.length + 1}`,
+      x: rawGeometry.end.x,
+      y: rawGeometry.end.y,
+    });
+  }
+
+  return boundary;
+}
+
+function buildAppendClosingSegmentResult({
+  units,
+  start,
+  segments,
+  measuredLength,
+  settings,
+  rawHeadingsRad,
+}) {
+  const measuredGeometry = buildSegmentGeometry(
+    segments,
+    rawHeadingsRad,
+    start,
+  );
+  const closingDx = start.x - measuredGeometry.end.x;
+  const closingDy = start.y - measuredGeometry.end.y;
+  const closingLength = Math.hypot(closingDx, closingDy);
+  const closingSegment =
+    closingLength <= settings.toleranceDistance
+      ? null
+      : {
+          name: "CLOSE",
+          synthetic: true,
+          measured: false,
+          length: closingLength,
+          headingDeg: headingFromDelta(closingDx, closingDy),
+          from: { ...measuredGeometry.end },
+          to: { ...start },
+        };
+
+  return {
+    ok: true,
+    boundary: boundaryFromOpenTraverse(
+      measuredGeometry,
+      settings.toleranceDistance,
+    ),
+    warnings: [],
+    traverse: {
+      units,
+      inputMode: "length_heading_traverse",
+      traverseMode: "append_closing_segment",
+      headingConvention: {
+        zeroDeg: "north",
+        eastDeg: 90,
+        southDeg: 180,
+        westDeg: 270,
+        increases: "clockwise",
+      },
+      start,
+      measuredLength,
+      boundaryPerimeter:
+        measuredLength + (closingSegment?.length ?? 0),
+      measured: measuredGeometry,
+      correction: {
+        mode: "none",
+        applied: false,
+        reason:
+          "Measured segments are preserved exactly. A synthetic final segment closes the boundary back to the starting point.",
+      },
+      appendedClosingSegment: closingSegment,
+    },
+  };
+}
+
 export function buildBoundaryFromTraverse(rawTraverse) {
   const traverse =
     rawTraverse && typeof rawTraverse === "object"
       ? rawTraverse
       : {};
+  const mode = normalizeTraverseMode(traverse);
   const start = normalizeStart(traverse.start);
   const segments = normalizeSegments(traverse.segments);
-  const errors = validateTraverse(start, segments);
+  const errors = validateTraverse(start, segments, mode);
 
   if (errors.length > 0) {
     return { ok: false, errors };
   }
 
   const units = String(traverse.units ?? "input-units");
-  const perimeter = segments.reduce(
+  const measuredLength = segments.reduce(
     (sum, segment) => sum + segment.length,
     0,
   );
   const settings = correctionSettings(
     traverse.correction,
-    perimeter,
+    measuredLength,
   );
   const rawHeadingsRad = segments.map(
     (segment) => segment.inputHeadingDeg * DEG_TO_RAD,
   );
+
+  if (mode === "append_closing_segment") {
+    return buildAppendClosingSegmentResult({
+      units,
+      start,
+      segments,
+      measuredLength,
+      settings,
+      rawHeadingsRad,
+    });
+  }
+
   const rawClosure = closureFromHeadings(
     segments,
     rawHeadingsRad,
@@ -448,14 +579,16 @@ export function buildBoundaryFromTraverse(rawTraverse) {
         ],
         traverse: {
           units,
+          traverseMode: "closed_adjustable",
           start,
-          perimeter,
+          perimeter: measuredLength,
           raw: {
             ...rawGeometry,
             closure: rawClosure,
-            relativeClosure: rawClosure.distance / perimeter,
+            relativeClosure:
+              rawClosure.distance / measuredLength,
             closurePrecision: closurePrecision(
-              perimeter,
+              measuredLength,
               rawClosure.distance,
             ),
           },
@@ -480,14 +613,16 @@ export function buildBoundaryFromTraverse(rawTraverse) {
         ],
         traverse: {
           units,
+          traverseMode: "closed_adjustable",
           start,
-          perimeter,
+          perimeter: measuredLength,
           raw: {
             ...rawGeometry,
             closure: rawClosure,
-            relativeClosure: rawClosure.distance / perimeter,
+            relativeClosure:
+              rawClosure.distance / measuredLength,
             closurePrecision: closurePrecision(
-              perimeter,
+              measuredLength,
               rawClosure.distance,
             ),
           },
@@ -535,14 +670,16 @@ export function buildBoundaryFromTraverse(rawTraverse) {
       ],
       traverse: {
         units,
+        traverseMode: "closed_adjustable",
         start,
-        perimeter,
+        perimeter: measuredLength,
         raw: {
           ...rawGeometry,
           closure: rawClosure,
-          relativeClosure: rawClosure.distance / perimeter,
+          relativeClosure:
+            rawClosure.distance / measuredLength,
           closurePrecision: closurePrecision(
-            perimeter,
+            measuredLength,
             rawClosure.distance,
           ),
         },
@@ -584,6 +721,7 @@ export function buildBoundaryFromTraverse(rawTraverse) {
     traverse: {
       units,
       inputMode: "length_heading_traverse",
+      traverseMode: "closed_adjustable",
       headingConvention: {
         zeroDeg: "north",
         eastDeg: 90,
@@ -592,13 +730,14 @@ export function buildBoundaryFromTraverse(rawTraverse) {
         increases: "clockwise",
       },
       start,
-      perimeter,
+      perimeter: measuredLength,
       raw: {
         ...rawGeometry,
         closure: rawClosure,
-        relativeClosure: rawClosure.distance / perimeter,
+        relativeClosure:
+          rawClosure.distance / measuredLength,
         closurePrecision: closurePrecision(
-          perimeter,
+          measuredLength,
           rawClosure.distance,
         ),
       },
@@ -625,9 +764,9 @@ export function buildBoundaryFromTraverse(rawTraverse) {
         ...correctedGeometry,
         closure: correctedClosure,
         relativeClosure:
-          correctedClosure.distance / perimeter,
+          correctedClosure.distance / measuredLength,
         closurePrecision: closurePrecision(
-          perimeter,
+          measuredLength,
           correctedClosure.distance,
         ),
       },

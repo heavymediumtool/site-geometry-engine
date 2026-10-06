@@ -4,7 +4,7 @@ Cloudflare Worker for validating, analyzing, and rendering 2D site geometry from
 
 ## Status
 
-Version: `0.2.0`
+Version: `0.2.1`
 
 Production Worker:
 
@@ -172,7 +172,7 @@ Cloudflare Builds is connected to the GitHub `main` branch.
 
 ## Length + compass-heading traverse input
 
-The boundary can now be supplied as a closed traverse instead of explicit XY coordinates.
+The boundary can be supplied from compass traverse measurements instead of explicit XY coordinates.
 
 Phone-compass convention is used:
 
@@ -206,7 +206,42 @@ Each compact segment is:
 [length, compassHeadingDegrees]
 ```
 
-The segments must represent every edge of the closed area, including the final measured leg back toward the starting point. Because field measurements rarely close perfectly, the engine keeps the supplied lengths fixed and adjusts headings with an iterative least-squares closure solution.
+Traverse input has two explicit modes:
+
+### `closed_adjustable`
+
+This is the default and is for a true measured closed traverse. Every supplied leg is intended to be a measured perimeter edge, including the final measured leg back toward the start.
+
+Because field measurements rarely close perfectly, the engine keeps supplied lengths fixed and may adjust headings with an iterative least-squares closure solution.
+
+### `append_closing_segment`
+
+Use this when the supplied legs are measured sequentially and the instruction is to connect the final measured point back to the origin/start.
+
+In this mode the measured lengths and headings are preserved exactly. The engine does not reinterpret the remaining distance as measurement error. Instead it computes one synthetic closing segment from the final measured point back to the starting point.
+
+Example:
+
+```json
+{
+  "traverse": {
+    "mode": "append_closing_segment",
+    "units": "ft",
+    "start": [0, 0],
+    "segments": [
+      [13, 135],
+      [10, 90],
+      [20, 30],
+      [28, 270]
+    ]
+  },
+  "objects": []
+}
+```
+
+For that example the four measured legs remain exactly 135°, 90°, 30°, and 270°. The engine appends a synthetic closing leg of about 8.2151 ft at 188.3457°. The response distinguishes `measuredLength`, `boundaryPerimeter`, the measured geometry, and `appendedClosingSegment`.
+
+`closeToStart: true` is accepted as a convenience alias for `mode: "append_closing_segment"`.
 
 The JSON response includes both the raw and corrected traverse:
 

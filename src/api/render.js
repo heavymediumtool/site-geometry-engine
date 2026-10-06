@@ -23,7 +23,7 @@ import { buildBoundaryFromTraverse } from "../geometry/traverse.js";
 import { validateScene } from "../geometry/validate.js";
 import { renderSvg } from "../render/svg.js";
 
-export const ENGINE_VERSION = "0.2.0";
+export const ENGINE_VERSION = "0.2.1";
 
 function warningsFromObjects(objects) {
   return objects

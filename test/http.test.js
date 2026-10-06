@@ -27,7 +27,7 @@ test("GET /demo returns the canonical rendered scene", async () => {
 
   const payload = await response.json();
   assert.equal(payload.ok, true);
-  assert.equal(payload.version, "0.2.0");
+  assert.equal(payload.version, "0.2.1");
   assert.equal(payload.objects[0].radius, 1);
 });
 
@@ -120,4 +120,47 @@ test("GET /demo/traverse returns corrected traverse diagnostics", async () => {
   assert.equal(payload.traverse.correction.applied, true);
   assert.ok(payload.traverse.raw.closure.distance > 0);
   assert.ok(payload.traverse.corrected.closure.distance < 1e-7);
+});
+
+
+test("POST /geometry/render supports append_closing_segment without altering measured headings", async () => {
+  const response = await worker.fetch(
+    new Request("https://example.test/geometry/render", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        traverse: {
+          mode: "append_closing_segment",
+          units: "ft",
+          start: [0, 0],
+          segments: [
+            [13, 135],
+            [10, 90],
+            [20, 30],
+            [28, 270],
+          ],
+        },
+        objects: [],
+      }),
+    }),
+  );
+
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.ok, true);
+  assert.equal(payload.version, "0.2.1");
+  assert.equal(payload.traverse.traverseMode, "append_closing_segment");
+  assert.equal(payload.traverse.correction.applied, false);
+  assert.deepEqual(
+    payload.traverse.measured.segments.map(
+      (segment) => segment.headingDeg,
+    ),
+    [135, 90, 30, 270],
+  );
+  assert.ok(
+    Math.abs(
+      payload.traverse.appendedClosingSegment.length -
+        8.21511551661843,
+    ) < 1e-9,
+  );
 });
