@@ -1,10 +1,11 @@
 {
   "name": "site-geometry-engine",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "node --check src/index.js",
+    "check": "node --test",
+    "test": "node --test",
     "deploy": "wrangler deploy"
   },
   "devDependencies": {
