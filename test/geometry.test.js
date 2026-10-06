@@ -225,3 +225,132 @@ test("rejects null coordinates instead of coercing them to zero", () => {
     ),
   );
 });
+
+
+test("accepts a closed traverse using phone-compass headings", () => {
+  const result = buildScene({
+    traverse: {
+      units: "ft",
+      start: [0, 0],
+      segments: [
+        [10, 0],
+        [10, 90],
+        [10, 180],
+        [10, 270],
+      ],
+    },
+    objects: [[5, 5, 2]],
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.inputMode, "length_heading_traverse");
+  assert.equal(result.coordinateSystem.headingConvention.zeroDeg, "north");
+  assert.equal(result.coordinateSystem.headingConvention.eastDeg, 90);
+  assert.equal(result.traverse.correction.applied, false);
+  assert.ok(result.traverse.raw.closure.distance < 1e-10);
+  assert.ok(Math.abs(result.boundary[1].x) < 1e-9);
+  assert.ok(Math.abs(result.boundary[1].y - 10) < 1e-9);
+  assert.ok(Math.abs(result.boundary[2].x - 10) < 1e-9);
+  assert.ok(Math.abs(result.boundary[2].y - 10) < 1e-9);
+});
+
+test("corrects relative heading inconsistency while holding lengths fixed", () => {
+  const result = buildScene({
+    traverse: {
+      units: "ft",
+      segments: [
+        [10, 90],
+        [10, 182],
+        [10, 270],
+        [10, 0],
+      ],
+    },
+    objects: [],
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.traverse.correction.applied, true);
+  assert.ok(result.traverse.raw.closure.distance > 0.3);
+  assert.ok(result.traverse.corrected.closure.distance < 1e-7);
+  assert.ok(result.traverse.correction.maxAbsHeadingCorrectionDeg < 2);
+  assert.deepEqual(
+    result.traverse.corrected.segments.map((segment) => segment.length),
+    [10, 10, 10, 10],
+  );
+  assert.ok(
+    result.warnings.some(
+      (warning) =>
+        warning.code === "traverse_heading_correction_applied",
+    ),
+  );
+});
+
+test("rejects a traverse requiring correction beyond the configured safety limit", () => {
+  const result = buildScene({
+    traverse: {
+      segments: [
+        [10, 90],
+        [10, 225],
+        [10, 270],
+        [10, 0],
+      ],
+      correction: {
+        maxHeadingCorrectionDeg: 5,
+      },
+    },
+    objects: [],
+  });
+
+  assert.equal(result.ok, false);
+  assert.ok(
+    result.errors.some(
+      (error) =>
+        error.code === "traverse_heading_correction_excessive",
+    ),
+  );
+  assert.ok(result.traverse.candidateCorrection);
+});
+
+test("can disable traverse correction and expose the raw closure failure", () => {
+  const result = buildScene({
+    traverse: {
+      segments: [
+        [10, 90],
+        [10, 182],
+        [10, 270],
+        [10, 0],
+      ],
+      correction: {
+        mode: "none",
+      },
+    },
+    objects: [],
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.errors[0].code, "traverse_not_closed");
+  assert.ok(result.traverse.raw.closure.distance > 0.3);
+});
+
+test("rejects simultaneous coordinate boundary and traverse inputs", () => {
+  const result = buildScene({
+    boundary: [
+      [0, 0],
+      [10, 0],
+      [10, 10],
+      [0, 10],
+    ],
+    traverse: {
+      segments: [
+        [10, 0],
+        [10, 90],
+        [10, 180],
+        [10, 270],
+      ],
+    },
+    objects: [],
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.errors[0].code, "input_geometry_conflict");
+});

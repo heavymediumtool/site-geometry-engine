@@ -15,6 +15,7 @@ import {
   COMPLEX_DEMO_INPUT,
   DEMO_INPUT,
   ENGINE_VERSION,
+  TRAVERSE_DEMO_INPUT,
 } from "./api/render.js";
 
 const JSON_HEADERS = {
@@ -94,7 +95,9 @@ async function renderRequest(request, svgOnly) {
     return jsonResponse(result, 400);
   }
 
-  return svgOnly ? svgResponse(result.svg) : jsonResponse(result);
+  return svgOnly
+    ? svgResponse(result.svg)
+    : jsonResponse(result);
 }
 
 export default {
@@ -105,12 +108,15 @@ export default {
 
     const url = new URL(request.url);
 
-    if (request.method === "GET" && (url.pathname === "/" || url.pathname === "/health")) {
+    if (
+      request.method === "GET" &&
+      (url.pathname === "/" || url.pathname === "/health")
+    ) {
       return jsonResponse({
         ok: true,
         service: "site-geometry-engine",
         version: ENGINE_VERSION,
-        phase: "geometry-mvp",
+        phase: "traverse-input",
         endpoints: [
           "POST /geometry/render",
           "POST /geometry/render.svg",
@@ -118,24 +124,52 @@ export default {
           "GET /demo.svg",
           "GET /demo/complex",
           "GET /demo/complex.svg",
+          "GET /demo/traverse",
+          "GET /demo/traverse.svg",
         ],
       });
     }
 
-    if (request.method === "GET" && url.pathname === "/demo") {
+    if (
+      request.method === "GET" &&
+      url.pathname === "/demo"
+    ) {
       return jsonResponse(buildScene(DEMO_INPUT));
     }
 
-    if (request.method === "GET" && url.pathname === "/demo.svg") {
+    if (
+      request.method === "GET" &&
+      url.pathname === "/demo.svg"
+    ) {
       return svgResponse(buildScene(DEMO_INPUT).svg);
     }
 
-    if (request.method === "GET" && url.pathname === "/demo/complex") {
+    if (
+      request.method === "GET" &&
+      url.pathname === "/demo/complex"
+    ) {
       return jsonResponse(buildScene(COMPLEX_DEMO_INPUT));
     }
 
-    if (request.method === "GET" && url.pathname === "/demo/complex.svg") {
+    if (
+      request.method === "GET" &&
+      url.pathname === "/demo/complex.svg"
+    ) {
       return svgResponse(buildScene(COMPLEX_DEMO_INPUT).svg);
+    }
+
+    if (
+      request.method === "GET" &&
+      url.pathname === "/demo/traverse"
+    ) {
+      return jsonResponse(buildScene(TRAVERSE_DEMO_INPUT));
+    }
+
+    if (
+      request.method === "GET" &&
+      url.pathname === "/demo/traverse.svg"
+    ) {
+      return svgResponse(buildScene(TRAVERSE_DEMO_INPUT).svg);
     }
 
     if (

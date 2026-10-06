@@ -4,7 +4,7 @@ Cloudflare Worker for validating, analyzing, and rendering 2D site geometry from
 
 ## Status
 
-Version: `0.1.1`
+Version: `0.2.0`
 
 Production Worker:
 
@@ -168,3 +168,100 @@ npm run deploy
 ```
 
 Cloudflare Builds is connected to the GitHub `main` branch.
+
+
+## Length + compass-heading traverse input
+
+The boundary can now be supplied as a closed traverse instead of explicit XY coordinates.
+
+Phone-compass convention is used:
+
+- `0°` = north
+- `90°` = east
+- `180°` = south
+- `270°` = west
+- headings increase clockwise
+
+Compact example:
+
+```json
+{
+  "traverse": {
+    "units": "ft",
+    "start": [0, 0],
+    "segments": [
+      [10, 90],
+      [10, 182],
+      [10, 270],
+      [10, 0]
+    ]
+  },
+  "objects": []
+}
+```
+
+Each compact segment is:
+
+```text
+[length, compassHeadingDegrees]
+```
+
+The segments must represent every edge of the closed area, including the final measured leg back toward the starting point. Because field measurements rarely close perfectly, the engine keeps the supplied lengths fixed and adjusts headings with an iterative least-squares closure solution.
+
+The JSON response includes both the raw and corrected traverse:
+
+- raw points and segment endpoints;
+- raw closure vector and closure distance;
+- relative closure and closure precision;
+- corrected heading for every segment;
+- heading correction applied to every segment;
+- corrected closure error;
+- maximum and RMS heading correction;
+- warnings when correction is material.
+
+Expanded segments may be named:
+
+```json
+{
+  "traverse": {
+    "start": [100, 200],
+    "units": "ft",
+    "segments": [
+      {
+        "name": "Front",
+        "pointName": "A",
+        "length": 42.6,
+        "headingDeg": 86.4
+      }
+    ]
+  }
+}
+```
+
+Correction settings are optional:
+
+```json
+{
+  "correction": {
+    "mode": "auto",
+    "warningHeadingCorrectionDeg": 3,
+    "maxHeadingCorrectionDeg": 20,
+    "toleranceDistance": 0.000001
+  }
+}
+```
+
+Set `mode` to `none` to reject a traverse that does not close instead of correcting it.
+
+The correction system deliberately does not hide bad observations. A correction larger than the configured maximum is rejected and returned with candidate correction diagnostics so the field measurements can be checked.
+
+### Important limitation
+
+Closure detects relative inconsistencies between headings. It cannot detect a uniform compass bias. If every heading is wrong by the same +6°, for example, the entire polygon is simply rotated by 6° and can still close perfectly. Without an external reference direction, there is no mathematical evidence from the traverse alone that the common offset is wrong.
+
+### Traverse demonstrations
+
+- `GET /demo/traverse`
+- `GET /demo/traverse.svg`
+
+The demonstration intentionally includes a small heading inconsistency so the returned diagnostics show the correction process.

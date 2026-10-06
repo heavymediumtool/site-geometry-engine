@@ -14,7 +14,7 @@ This file exists so future agents can recover the project's architecture, remote
 - Production URL: `https://site-geometry-engine.allaboutstudios.workers.dev`
 - Wrangler config: `wrangler.jsonc`
 - Runtime entrypoint: `src/index.js`
-- Current API generation: `0.1.x`
+- Current API generation: `0.2.x`
 
 GitHub is the canonical code history. Cloudflare is the canonical deployed runtime.
 
@@ -475,3 +475,53 @@ If all prior chat context is missing:
 8. Make and commit the smallest coherent repository change.
 9. Run the configured Cloudflare build against that commit.
 10. Confirm tests, deployment, and production behavior.
+
+
+## Traverse input and measurement correction
+
+The engine accepts either explicit `boundary` coordinates or a `traverse`; never both in the same request.
+
+Traverse input represents a closed perimeter as ordered `[length, headingDegrees]` legs or expanded segment objects.
+
+Heading convention is phone-compass style:
+
+- 0° north;
+- 90° east;
+- 180° south;
+- 270° west;
+- clockwise positive.
+
+For a segment of length `L` and compass heading `θ`:
+
+```text
+dx = L × sin(θ)
+dy = L × cos(θ)
+```
+
+Angles are converted to radians internally.
+
+The default correction mode is heading-only least-squares closure:
+
+- segment lengths remain fixed;
+- raw observations are always retained in output;
+- the solver minimizes total squared heading change while driving XY closure error to numerical tolerance;
+- every per-segment heading correction is returned;
+- corrections above the warning threshold produce warnings;
+- corrections above the configured maximum are rejected rather than silently accepted;
+- `correction.mode = "none"` disables correction and requires the raw traverse to close.
+
+Do not replace this with a simple forced final edge. That would conceal measurement error and create an unmeasured side.
+
+Do not claim the solver has identified the uniquely wrong heading. Closed-traverse error supplies only closure constraints, so several heading-adjustment combinations can satisfy closure. The current equal-weight least-squares solution is the minimum-squared-change correction.
+
+A uniform compass bias is fundamentally unobservable from closure alone: adding the same angular offset to every heading rotates the entire traverse without changing closure. Preserve this limitation in documentation and user-facing explanations.
+
+When changing traverse correction behavior, tests must cover:
+
+- an exactly closed compass traverse;
+- a small heading inconsistency that is corrected;
+- preservation of all supplied lengths;
+- excessive correction rejection;
+- correction-disabled failure;
+- heading convention/orientation;
+- continued compatibility with direct coordinate-boundary input.

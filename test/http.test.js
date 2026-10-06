@@ -27,7 +27,7 @@ test("GET /demo returns the canonical rendered scene", async () => {
 
   const payload = await response.json();
   assert.equal(payload.ok, true);
-  assert.equal(payload.version, "0.1.1");
+  assert.equal(payload.version, "0.2.0");
   assert.equal(payload.objects[0].radius, 1);
 });
 
@@ -105,4 +105,19 @@ test("GET /demo/complex renders all supported demonstration objects", async () =
   assert.equal(payload.objects.length, 6);
   assert.equal(payload.coordinateSystem.positiveY, "up");
   assert.equal(payload.coordinateSystem.equalAxisScale, true);
+});
+
+
+test("GET /demo/traverse returns corrected traverse diagnostics", async () => {
+  const response = await worker.fetch(
+    new Request("https://example.test/demo/traverse"),
+  );
+
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.ok, true);
+  assert.equal(payload.inputMode, "length_heading_traverse");
+  assert.equal(payload.traverse.correction.applied, true);
+  assert.ok(payload.traverse.raw.closure.distance > 0);
+  assert.ok(payload.traverse.corrected.closure.distance < 1e-7);
 });
