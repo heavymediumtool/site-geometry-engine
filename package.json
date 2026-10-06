@@ -4,12 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "tsc --noEmit",
+    "check": "node --check src/index.js",
     "deploy": "wrangler deploy"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20261006.0",
-    "typescript": "^5.9.3",
     "wrangler": "^4.45.0"
   }
 }
