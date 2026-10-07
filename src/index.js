@@ -116,7 +116,7 @@ export default {
         ok: true,
         service: "site-geometry-engine",
         version: ENGINE_VERSION,
-        phase: "traverse-input",
+        phase: "geometry-measurements",
         endpoints: [
           "POST /geometry/render",
           "POST /geometry/render.svg",

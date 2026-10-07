@@ -4,7 +4,7 @@ Cloudflare Worker for validating, analyzing, and rendering 2D site geometry from
 
 ## Status
 
-Version: `0.2.1`
+Version: `0.3.0`
 
 Production Worker:
 
@@ -18,7 +18,7 @@ Health check:
 
 ### `POST /geometry/render`
 
-Accepts an ordered exterior boundary and interior objects, then returns normalized geometry, validation/containment metadata, overlap metadata, calculated bounds, warnings, and SVG.
+Accepts an ordered exterior boundary and interior objects, then returns normalized geometry, deterministic boundary measurements, validation/containment metadata, overlap metadata, calculated bounds, warnings, and SVG.
 
 Minimal input:
 
@@ -110,6 +110,7 @@ Returns the complex demonstration directly as SVG.
 - Object centers must lie inside or on the boundary.
 - An object may extend beyond the boundary; that produces a warning rather than invalidating the scene.
 - SVG is a rendering output only. The normalized coordinate scene is the source of truth.
+- Successful JSON responses include `measurements` with polygon area, boundary perimeter, bounding width/height, and per-edge length plus phone-compass heading. Traverse measurements preserve the traverse's declared units; coordinate-only inputs report `input-units`.
 
 ## Architecture
 

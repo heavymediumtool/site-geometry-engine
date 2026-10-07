@@ -27,7 +27,7 @@ test("GET /demo returns the canonical rendered scene", async () => {
 
   const payload = await response.json();
   assert.equal(payload.ok, true);
-  assert.equal(payload.version, "0.2.1");
+  assert.equal(payload.version, "0.3.0");
   assert.equal(payload.objects[0].radius, 1);
 });
 
@@ -51,6 +51,8 @@ test("POST /geometry/render returns analyzed JSON and SVG", async () => {
   assert.equal(response.status, 200);
   const payload = await response.json();
   assert.equal(payload.ok, true);
+  assert.equal(payload.measurements.area, 100);
+  assert.equal(payload.measurements.perimeter, 40);
   assert.match(payload.svg, /<svg/);
 });
 
@@ -148,7 +150,7 @@ test("POST /geometry/render supports append_closing_segment without altering mea
   assert.equal(response.status, 200);
   const payload = await response.json();
   assert.equal(payload.ok, true);
-  assert.equal(payload.version, "0.2.1");
+  assert.equal(payload.version, "0.3.0");
   assert.equal(payload.traverse.traverseMode, "append_closing_segment");
   assert.equal(payload.traverse.correction.applied, false);
   assert.deepEqual(

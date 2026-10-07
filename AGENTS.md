@@ -14,7 +14,7 @@ This file exists so future agents can recover the project's architecture, remote
 - Production URL: `https://site-geometry-engine.allaboutstudios.workers.dev`
 - Wrangler config: `wrangler.jsonc`
 - Runtime entrypoint: `src/index.js`
-- Current API generation: `0.2.x`
+- Current API generation: `0.3.x`
 
 GitHub is the canonical code history. Cloudflare is the canonical deployed runtime.
 
@@ -170,7 +170,7 @@ Exercises the broader shape/style vocabulary.
 
 `POST /geometry/render`
 
-Returns normalized geometry, analysis metadata, calculated bounds, warnings, overlap information, and an SVG string.
+Returns normalized geometry, deterministic boundary measurements, analysis metadata, calculated bounds, warnings, overlap information, and an SVG string.
 
 ### Render SVG directly
 
@@ -295,6 +295,7 @@ These are intentional contract rules and should not be casually changed:
 - Missing object names are generated as `O1`, `O2`, ...
 - Bounds include boundary geometry and object extents.
 - View bounds preserve equal axis scale and include visual padding.
+- Successful scenes expose deterministic boundary measurements: area, perimeter, bounding width/height, and each closed boundary edge's length and phone-compass heading.
 - Never silently coerce missing/null coordinates to zero.
 
 If a future request intentionally changes one of these rules, update tests and documentation in the same commit.
@@ -330,6 +331,7 @@ src/
     normalize.js           compact/expanded input normalization
     validate.js            contract validation
     polygon.js             polygon primitives
+    measure.js             boundary area/perimeter/edge measurements
     shapes.js              object geometry/extents
     analyze.js             containment and overlaps
     bounds.js              geometry/view bounds

@@ -446,3 +446,59 @@ test("closed_adjustable remains the default for measured closed traverses", () =
   assert.equal(result.traverse.correction.applied, true);
   assert.ok(result.traverse.corrected.closure.distance < 1e-7);
 });
+
+
+test("returns deterministic boundary area, perimeter, dimensions, and edge headings", () => {
+  const result = buildScene({
+    boundary: [
+      [0, 0],
+      [10, 0],
+      [10, 10],
+      [0, 10],
+    ],
+    objects: [],
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.version, "0.3.0");
+  assert.equal(result.measurements.units, "input-units");
+  assert.equal(result.measurements.area, 100);
+  assert.equal(result.measurements.perimeter, 40);
+  assert.equal(result.measurements.boundingWidth, 10);
+  assert.equal(result.measurements.boundingHeight, 10);
+  assert.deepEqual(
+    result.measurements.edges.map(({ length, headingDeg }) => ({
+      length,
+      headingDeg,
+    })),
+    [
+      { length: 10, headingDeg: 90 },
+      { length: 10, headingDeg: 0 },
+      { length: 10, headingDeg: 270 },
+      { length: 10, headingDeg: 180 },
+    ],
+  );
+});
+
+test("reports traverse measurement units on derived boundary quantities", () => {
+  const result = buildScene({
+    traverse: {
+      mode: "append_closing_segment",
+      units: "ft",
+      start: [0, 0],
+      segments: [
+        [4, 87],
+        [10, 3],
+        [20, 30],
+        [28, 150],
+      ],
+    },
+    objects: [],
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.measurements.units, "ft");
+  assert.ok(result.measurements.area > 0);
+  assert.ok(result.measurements.perimeter > 0);
+  assert.equal(result.measurements.edges.length, result.boundary.length);
+});

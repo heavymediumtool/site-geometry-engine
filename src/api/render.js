@@ -18,12 +18,13 @@ import {
   calculateGeometryBounds,
   calculateViewBounds,
 } from "../geometry/bounds.js";
+import { measureBoundary } from "../geometry/measure.js";
 import { normalizeSceneInput } from "../geometry/normalize.js";
 import { buildBoundaryFromTraverse } from "../geometry/traverse.js";
 import { validateScene } from "../geometry/validate.js";
 import { renderSvg } from "../render/svg.js";
 
-export const ENGINE_VERSION = "0.2.1";
+export const ENGINE_VERSION = "0.3.0";
 
 function warningsFromObjects(objects) {
   return objects
@@ -126,6 +127,11 @@ export function buildScene(rawInput) {
     objects,
   );
   const viewBounds = calculateViewBounds(geometryBounds);
+  const measurements = measureBoundary(
+    prepared.normalized.boundary,
+    geometryBounds,
+    prepared.traverse?.units ?? "input-units",
+  );
 
   const result = {
     ok: true,
@@ -146,6 +152,7 @@ export function buildScene(rawInput) {
       geometry: geometryBounds,
       view: viewBounds,
     },
+    measurements,
     boundary: prepared.normalized.boundary,
     objects,
     overlaps,
