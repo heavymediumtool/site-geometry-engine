@@ -14,7 +14,7 @@ This file exists so future agents can recover the project's architecture, remote
 - Production URL: `https://site-geometry-engine.allaboutstudios.workers.dev`
 - Wrangler config: `wrangler.jsonc`
 - Runtime entrypoint: `src/index.js`
-- Current API generation: `0.3.x`
+- Current API generation: `0.4.x`
 
 GitHub is the canonical code history. Cloudflare is the canonical deployed runtime.
 
@@ -177,6 +177,10 @@ Returns normalized geometry, deterministic boundary measurements, analysis metad
 `POST /geometry/render.svg`
 
 Accepts the same input and returns `image/svg+xml`.
+
+`GET /geometry/render.svg?scene=<url-encoded-json>`
+
+Provides a directly addressable SVG URL using the same scene contract and validation. The `scene` query parameter must decode to valid JSON. This route exists for consumers such as spreadsheets that need a URL to the production SVG; it must not introduce alternate geometry logic.
 
 ## Input model
 

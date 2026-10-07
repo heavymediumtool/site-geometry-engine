@@ -4,7 +4,7 @@ Cloudflare Worker for validating, analyzing, and rendering 2D site geometry from
 
 ## Status
 
-Version: `0.3.0`
+Version: `0.4.0`
 
 Production Worker:
 
@@ -82,6 +82,12 @@ Supported patterns:
 ### `POST /geometry/render.svg`
 
 Accepts the same JSON contract and returns the SVG directly as `image/svg+xml`.
+
+### `GET /geometry/render.svg?scene=<url-encoded-json>`
+
+Renders the same scene from a URL-encoded JSON query parameter and returns `image/svg+xml`. This is intended for consumers that need a stable, directly addressable production SVG URL, including spreadsheet image/link workflows.
+
+The decoded `scene` uses the exact same boundary/object/traverse contract and validation as the POST endpoint. Invalid or self-intersecting geometry is still rejected; the GET route does not weaken validation.
 
 ### `GET /demo`
 

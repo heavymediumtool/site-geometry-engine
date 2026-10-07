@@ -24,7 +24,7 @@ import { buildBoundaryFromTraverse } from "../geometry/traverse.js";
 import { validateScene } from "../geometry/validate.js";
 import { renderSvg } from "../render/svg.js";
 
-export const ENGINE_VERSION = "0.3.0";
+export const ENGINE_VERSION = "0.4.0";
 
 function warningsFromObjects(objects) {
   return objects

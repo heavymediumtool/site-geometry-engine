@@ -82,14 +82,8 @@ async function readJson(request) {
   }
 }
 
-async function renderRequest(request, svgOnly) {
-  const parsed = await readJson(request);
-
-  if (!parsed.ok) {
-    return parsed.response;
-  }
-
-  const result = buildScene(parsed.value);
+function renderScene(scene, svgOnly) {
+  const result = buildScene(scene);
 
   if (!result.ok) {
     return jsonResponse(result, 400);
@@ -98,6 +92,57 @@ async function renderRequest(request, svgOnly) {
   return svgOnly
     ? svgResponse(result.svg)
     : jsonResponse(result);
+}
+
+async function renderRequest(request, svgOnly) {
+  const parsed = await readJson(request);
+
+  if (!parsed.ok) {
+    return parsed.response;
+  }
+
+  return renderScene(parsed.value, svgOnly);
+}
+
+function renderSceneFromQuery(url) {
+  const sceneText = url.searchParams.get("scene");
+
+  if (!sceneText) {
+    return jsonResponse(
+      {
+        ok: false,
+        version: ENGINE_VERSION,
+        errors: [
+          {
+            code: "scene_query_missing",
+            message: "GET /geometry/render.svg requires a scene query parameter containing JSON.",
+          },
+        ],
+      },
+      400,
+    );
+  }
+
+  let scene;
+  try {
+    scene = JSON.parse(sceneText);
+  } catch {
+    return jsonResponse(
+      {
+        ok: false,
+        version: ENGINE_VERSION,
+        errors: [
+          {
+            code: "scene_query_invalid_json",
+            message: "The scene query parameter must decode to valid JSON.",
+          },
+        ],
+      },
+      400,
+    );
+  }
+
+  return renderScene(scene, true);
 }
 
 export default {
@@ -120,6 +165,7 @@ export default {
         endpoints: [
           "POST /geometry/render",
           "POST /geometry/render.svg",
+          "GET /geometry/render.svg?scene=<url-encoded-json>",
           "GET /demo",
           "GET /demo.svg",
           "GET /demo/complex",
@@ -170,6 +216,13 @@ export default {
       url.pathname === "/demo/traverse.svg"
     ) {
       return svgResponse(buildScene(TRAVERSE_DEMO_INPUT).svg);
+    }
+
+    if (
+      request.method === "GET" &&
+      url.pathname === "/geometry/render.svg"
+    ) {
+      return renderSceneFromQuery(url);
     }
 
     if (

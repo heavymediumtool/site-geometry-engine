@@ -27,7 +27,7 @@ test("GET /demo returns the canonical rendered scene", async () => {
 
   const payload = await response.json();
   assert.equal(payload.ok, true);
-  assert.equal(payload.version, "0.3.0");
+  assert.equal(payload.version, "0.4.0");
   assert.equal(payload.objects[0].radius, 1);
 });
 
@@ -150,7 +150,7 @@ test("POST /geometry/render supports append_closing_segment without altering mea
   assert.equal(response.status, 200);
   const payload = await response.json();
   assert.equal(payload.ok, true);
-  assert.equal(payload.version, "0.3.0");
+  assert.equal(payload.version, "0.4.0");
   assert.equal(payload.traverse.traverseMode, "append_closing_segment");
   assert.equal(payload.traverse.correction.applied, false);
   assert.deepEqual(
@@ -164,5 +164,46 @@ test("POST /geometry/render supports append_closing_segment without altering mea
       payload.traverse.appendedClosingSegment.length -
         8.21511551661843,
     ) < 1e-9,
+  );
+});
+
+
+test("GET /geometry/render.svg accepts a URL-encoded scene", async () => {
+  const scene = {
+    boundary: [
+      [0, 0],
+      [10, 0],
+      [10, 10],
+      [0, 10],
+    ],
+    objects: [[5, 5, 2]],
+  };
+  const url =
+    "https://example.test/geometry/render.svg?scene=" +
+    encodeURIComponent(JSON.stringify(scene));
+
+  const response = await worker.fetch(new Request(url));
+
+  assert.equal(response.status, 200);
+  assert.match(
+    response.headers.get("content-type"),
+    /image\/svg\+xml/,
+  );
+  assert.match(await response.text(), /<svg/);
+});
+
+test("GET /geometry/render.svg rejects invalid scene query JSON", async () => {
+  const response = await worker.fetch(
+    new Request(
+      "https://example.test/geometry/render.svg?scene=%7B",
+    ),
+  );
+
+  assert.equal(response.status, 400);
+  const payload = await response.json();
+  assert.equal(payload.ok, false);
+  assert.equal(
+    payload.errors[0].code,
+    "scene_query_invalid_json",
   );
 });
