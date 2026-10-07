@@ -460,7 +460,7 @@ test("returns deterministic boundary area, perimeter, dimensions, and edge headi
   });
 
   assert.equal(result.ok, true);
-  assert.equal(result.version, "0.3.0");
+  assert.equal(result.version, "0.4.0");
   assert.equal(result.measurements.units, "input-units");
   assert.equal(result.measurements.area, 100);
   assert.equal(result.measurements.perimeter, 40);
