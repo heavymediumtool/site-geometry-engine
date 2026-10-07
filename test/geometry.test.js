@@ -487,10 +487,10 @@ test("reports traverse measurement units on derived boundary quantities", () => 
       units: "ft",
       start: [0, 0],
       segments: [
-        [4, 87],
-        [10, 3],
+        [13, 143],
+        [10, 90],
         [20, 30],
-        [28, 150],
+        [28, 270],
       ],
     },
     objects: [],
